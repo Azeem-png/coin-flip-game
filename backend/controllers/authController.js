@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const nodemailer = require('nodemailer');
-const sgMail = require('@sendgrid/mail');
+const https = require('https');
 const { sanitizeInput } = require('../utils/sanitize');
 const logger = require('../utils/logger');
 
@@ -46,19 +46,33 @@ const generateToken = (id, tokenVersion = 0) => {
 // Generate OTP
 const generateOTP = () => crypto.randomInt(100000, 999999).toString();
 
-// Send email via SendGrid (preferred) or SMTP fallback
+// Send email via Brevo API (preferred) or SMTP fallback
 const sendEmail = async (to, subject, html) => {
-  const sgKey = process.env.SENDGRID_API_KEY;
-  if (sgKey) {
+  const brevoKey = process.env.BREVO_API_KEY;
+  if (brevoKey) {
     try {
-      sgMail.setApiKey(sgKey);
-      await sgMail.send({ to, from: process.env.EMAIL_USER || 'noreply.coinflip.support@gmail.com', subject, html });
+      const data = JSON.stringify({
+        sender: { email: process.env.EMAIL_USER || 'noreply.coinflip.support@gmail.com', name: 'CoinFlip Game' },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html
+      });
+      await new Promise((resolve, reject) => {
+        const req = https.request({
+          hostname: 'api.brevo.com', path: '/v3/smtp/email', method: 'POST',
+          headers: { 'api-key': brevoKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+          timeout: 5000
+        }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(b)); });
+        req.on('error', reject); req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+        req.write(data); req.end();
+      });
       return true;
     } catch (err) {
-      logger.warn('SendGrid error', { error: err.message });
-      console.error('SENDGRID_ERROR:', err.message);
+      logger.warn('Brevo error', { error: err.message });
+      console.error('BREVO_ERROR:', err.message);
     }
   }
+  // SMTP fallback (may not work on Render free tier)
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.gmail.com',
