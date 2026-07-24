@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 const { sanitizeInput } = require('../utils/sanitize');
 const logger = require('../utils/logger');
 
@@ -45,27 +46,39 @@ const generateToken = (id, tokenVersion = 0) => {
 // Generate OTP
 const generateOTP = () => crypto.randomInt(100000, 999999).toString();
 
-// Send OTP email
-const sendOTPEmail = async (email, otp, name) => {
+// Send email via SendGrid (preferred) or SMTP fallback
+const sendEmail = async (to, subject, html) => {
+  const sgKey = process.env.SENDGRID_API_KEY;
+  if (sgKey) {
+    try {
+      sgMail.setApiKey(sgKey);
+      await sgMail.send({ to, from: process.env.EMAIL_USER || 'noreply.coinflip.support@gmail.com', subject, html });
+      return true;
+    } catch (err) {
+      logger.warn('SendGrid error', { error: err.message });
+      console.error('SENDGRID_ERROR:', err.message);
+    }
+  }
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: Number(process.env.EMAIL_PORT) || 465,
-      secure: true,
+      port: Number(process.env.EMAIL_PORT) || 587,
       auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
       connectionTimeout: 5000,
       greetingTimeout: 5000
     });
-    await transporter.sendMail({
-      from: `"CoinFlip Game" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Your OTP - CoinFlip Game',
-      html: `<h2>Hello ${name}!</h2><p>Your OTP is: <strong>${otp}</strong></p><p>Valid for 10 minutes.</p>`
-    });
+    await transporter.sendMail({ from: `"CoinFlip Game" <${process.env.EMAIL_USER}>`, to, subject, html });
+    return true;
   } catch (err) {
-    logger.warn('Email send error', { error: err.message });
-    console.error('EMAIL_ERROR:', err.message);
+    logger.warn('SMTP email error', { error: err.message });
+    console.error('SMTP_ERROR:', err.message);
+    return false;
   }
+};
+
+const sendOTPEmail = async (email, otp, name) => {
+  const html = `<h2>Hello ${name}!</h2><p>Your OTP is: <strong>${otp}</strong></p><p>Valid for 10 minutes.</p>`;
+  await sendEmail(email, 'Your OTP - CoinFlip Game', html);
 };
 
 // @route POST /api/auth/register
@@ -268,25 +281,8 @@ exports.forgotPassword = async (req, res) => {
 
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password.html?token=${resetToken}`;
 
-    try {
-      const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: Number(process.env.EMAIL_PORT) || 465,
-        secure: true,
-        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-        connectionTimeout: 5000,
-        greetingTimeout: 5000
-      });
-      await transporter.sendMail({
-        from: `"CoinFlip Game" <${process.env.EMAIL_USER}>`,
-        to: user.email,
-        subject: 'Password Reset - CoinFlip Game',
-        html: `<h2>Password Reset</h2><p>Use the token below to reset your password. Valid for 15 minutes.</p><p style="font-size:24px;text-align:center;background:#f5f5f5;padding:12px;letter-spacing:4px;font-family:monospace;"><strong>${resetToken}</strong></p><p>Visit: <a href="${resetUrl}">${resetUrl}</a> and enter the token along with your new password.</p><p>If you didn't request this, ignore this email.</p>`
-      });
-    } catch (err) {
-      logger.warn('Email send error', { error: err.message });
-      console.error('EMAIL_ERROR:', err.message);
-    }
+    const html = `<h2>Password Reset</h2><p>Use the token below to reset your password. Valid for 15 minutes.</p><p style="font-size:24px;text-align:center;background:#f5f5f5;padding:12px;letter-spacing:4px;font-family:monospace;"><strong>${resetToken}</strong></p><p>Visit: <a href="${resetUrl}">${resetUrl}</a> and enter the token along with your new password.</p><p>If you didn't request this, ignore this email.</p>`;
+    await sendEmail(user.email, 'Password Reset - CoinFlip Game', html);
 
     res.json({ success: true, message: 'If the email exists, a reset link has been sent.', debugResetToken: resetToken });
   } catch (error) {
