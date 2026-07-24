@@ -46,42 +46,101 @@ const generateToken = (id, tokenVersion = 0) => {
 // Generate OTP
 const generateOTP = () => crypto.randomInt(100000, 999999).toString();
 
-// Send email via Brevo API (preferred) or SMTP fallback
+// ─── Gmail REST API (OAuth2) – works on Render free tier via HTTPS/443 ───
+const getGmailAccessToken = async () => {
+  const data = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    client_secret: process.env.GOOGLE_CLIENT_SECRET,
+    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+    grant_type: 'refresh_token'
+  }).toString();
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'oauth2.googleapis.com', path: '/token', method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(data) },
+      timeout: 10000
+    }, res => {
+      let b = ''; res.on('data', c => b += c);
+      res.on('end', () => {
+        if (res.statusCode !== 200) reject(new Error(`Gmail token error: ${res.statusCode} ${b}`));
+        else resolve(JSON.parse(b).access_token);
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Gmail token timeout')); });
+    req.write(data); req.end();
+  });
+};
+
+const sendEmailViaGmailAPI = async (to, subject, html) => {
+  const accessToken = await getGmailAccessToken();
+  const email = [
+    `From: "CoinFlip Game" <${process.env.EMAIL_USER}>`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=utf-8',
+    '',
+    html
+  ].join('\r\n');
+  const raw = Buffer.from(email).toString('base64url');
+  const data = JSON.stringify({ raw });
+  await new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'gmail.googleapis.com', path: '/gmail/v1/users/me/messages/send', method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+      timeout: 10000
+    }, res => {
+      let b = ''; res.on('data', c => b += c);
+      res.on('end', () => {
+        if (res.statusCode === 200 || res.statusCode === 201) resolve(b);
+        else reject(new Error(`Gmail API error: ${res.statusCode} ${b}`));
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Gmail API timeout')); });
+    req.write(data); req.end();
+  });
+};
+
+// Email sending with 3-tier fallback: Gmail REST API → Brevo → SMTP
 const sendEmail = async (to, subject, html) => {
-  const brevoKey = process.env.BREVO_API_KEY;
-  if (brevoKey) {
+  // 1. Gmail REST API (works on Render free tier – HTTPS/443, no SMTP ports)
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN) {
+    try { await sendEmailViaGmailAPI(to, subject, html); return true; }
+    catch (err) { logger.warn('Gmail API error', { error: err.message }); console.error('GMAIL_API_ERROR:', err.message); }
+  }
+  // 2. Brevo API (HTTPS fallback)
+  if (process.env.BREVO_API_KEY) {
     try {
       const data = JSON.stringify({
         sender: { email: process.env.EMAIL_USER || 'noreply.coinflip.support@gmail.com', name: 'CoinFlip Game' },
-        to: [{ email: to }],
-        subject,
-        htmlContent: html
+        to: [{ email: to }], subject, htmlContent: html
       });
       await new Promise((resolve, reject) => {
         const req = https.request({
           hostname: 'api.brevo.com', path: '/v3/smtp/email', method: 'POST',
-          headers: { 'api-key': brevoKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+          headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
           timeout: 5000
         }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(b)); });
         req.on('error', reject); req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
         req.write(data); req.end();
       });
       return true;
-    } catch (err) {
-      logger.warn('Brevo error', { error: err.message });
-      console.error('BREVO_ERROR:', err.message);
-    }
+    } catch (err) { logger.warn('Brevo error', { error: err.message }); console.error('BREVO_ERROR:', err.message); }
   }
-  // SMTP fallback (may not work on Render free tier)
+  // 3. SMTP fallback (blocked on Render free tier, works locally)
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.gmail.com',
       port: Number(process.env.EMAIL_PORT) || 587,
       auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-      connectionTimeout: 5000,
-      greetingTimeout: 5000
+      connectionTimeout: 3000, greetingTimeout: 3000
     });
-    await transporter.sendMail({ from: `"CoinFlip Game" <${process.env.EMAIL_USER}>`, to, subject, html });
+    await Promise.race([
+      transporter.sendMail({ from: `"CoinFlip Game" <${process.env.EMAIL_USER}>`, to, subject, html }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('SMTP timeout')), 4000))
+    ]);
     return true;
   } catch (err) {
     logger.warn('SMTP email error', { error: err.message });
