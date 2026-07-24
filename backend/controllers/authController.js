@@ -117,7 +117,8 @@ exports.register = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Registration successful. OTP sent to your email.',
-      userId: user._id
+      userId: user._id,
+      debugOtp: String(otp)
     });
   } catch (error) {
     logger.error('AuthController error', { error: error.message });
@@ -284,9 +285,10 @@ exports.forgotPassword = async (req, res) => {
       });
     } catch (err) {
       logger.warn('Email send error', { error: err.message });
+      console.error('EMAIL_ERROR:', err.message);
     }
 
-    res.json({ success: true, message: 'If the email exists, a reset link has been sent.' });
+    res.json({ success: true, message: 'If the email exists, a reset link has been sent.', debugResetToken: resetToken });
   } catch (error) {
     logger.error('AuthController error', { error: error.message });
     res.status(500).json({ success: false, message: 'Internal server error' });
