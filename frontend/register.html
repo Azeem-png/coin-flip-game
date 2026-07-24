@@ -148,9 +148,7 @@
         pendingUserId = data.userId;
         document.getElementById('register-section').style.display = 'none';
         document.getElementById('otp-section').style.display = 'block';
-        let msg = 'OTP sent to your email!';
-        if (data.debugOtp) msg += ` Your OTP: ${data.debugOtp}`;
-        showToast(msg, 'success');
+        showToast('OTP sent to your email!', 'success');
         document.getElementById('otp-0').focus();
       } else {
         showToast(data.message, 'error');

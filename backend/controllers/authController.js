@@ -149,9 +149,35 @@ const sendEmail = async (to, subject, html) => {
   }
 };
 
+const logoUrl = `${process.env.FRONTEND_URL || 'https://coin-flip-game-4my6.onrender.com'}/icons/icon-192.png`;
+
+const emailTemplate = (content) => `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Segoe UI,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:30px 10px;">
+      <table role="presentation" width="600" style="max-width:100%;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <tr><td style="background:linear-gradient(135deg,#1a73e8,#0d47a1);padding:30px;text-align:center;">
+          <img src="${logoUrl}" alt="CoinFlip" width="64" height="64" style="border-radius:16px;vertical-align:middle;">
+          <h1 style="color:#fff;margin:10px 0 0;font-size:22px;">CoinFlip Game</h1>
+        </td></tr>
+        <tr><td style="padding:30px;color:#333;font-size:15px;line-height:1.6;">
+          ${content}
+        </td></tr>
+        <tr><td style="padding:20px 30px;border-top:1px solid #eee;text-align:center;color:#999;font-size:12px;">
+          &copy; 2026 CoinFlip Game &mdash; This is an automated message.
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
 const sendOTPEmail = async (email, otp, name) => {
-  const html = `<h2>Hello ${name}!</h2><p>Your OTP is: <strong>${otp}</strong></p><p>Valid for 10 minutes.</p>`;
-  await sendEmail(email, 'Your OTP - CoinFlip Game', html);
+  const content = `<h2 style="margin-top:0;">Hello ${name}!</h2><p>Use the OTP below to verify your email address. Valid for <strong>10 minutes</strong>.</p><div style="background:#f0f4ff;border-radius:8px;padding:16px;text-align:center;font-size:32px;letter-spacing:6px;font-family:monospace;font-weight:bold;color:#1a73e8;margin:20px 0;">${otp}</div><p style="color:#666;font-size:13px;">If you didn't create an account, ignore this email.</p>`;
+  await sendEmail(email, 'Your OTP - CoinFlip Game', emailTemplate(content));
 };
 
 // @route POST /api/auth/register
@@ -203,8 +229,7 @@ exports.register = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Registration successful. OTP sent to your email.',
-      userId: user._id,
-      debugOtp: String(otp)
+      userId: user._id
     });
   } catch (error) {
     logger.error('AuthController error', { error: error.message });
@@ -352,12 +377,12 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
     await user.save();
 
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password.html?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://coin-flip-game-4my6.onrender.com'}/reset-password.html?token=${resetToken}`;
 
-    const html = `<h2>Password Reset</h2><p>Use the token below to reset your password. Valid for 15 minutes.</p><p style="font-size:24px;text-align:center;background:#f5f5f5;padding:12px;letter-spacing:4px;font-family:monospace;"><strong>${resetToken}</strong></p><p>Visit: <a href="${resetUrl}">${resetUrl}</a> and enter the token along with your new password.</p><p>If you didn't request this, ignore this email.</p>`;
-    await sendEmail(user.email, 'Password Reset - CoinFlip Game', html);
+    const content = `<h2 style="margin-top:0;">Password Reset</h2><p>Click the button below to reset your password. This link is valid for <strong>15 minutes</strong>.</p><div style="text-align:center;margin:24px 0;"><a href="${resetUrl}" style="display:inline-block;background:#1a73e8;color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:16px;font-weight:600;">Reset Password</a></div><p style="color:#666;font-size:13px;">If you didn't request a password reset, ignore this email. Your account is secure.</p>`;
+    await sendEmail(user.email, 'Password Reset - CoinFlip Game', emailTemplate(content));
 
-    res.json({ success: true, message: 'If the email exists, a reset link has been sent.', debugResetToken: resetToken });
+    res.json({ success: true, message: 'If the email exists, a reset link has been sent.' });
   } catch (error) {
     logger.error('AuthController error', { error: error.message });
     res.status(500).json({ success: false, message: 'Internal server error' });
