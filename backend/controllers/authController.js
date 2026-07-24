@@ -50,7 +50,8 @@ const sendOTPEmail = async (email, otp, name) => {
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: process.env.EMAIL_PORT || 587,
+      port: Number(process.env.EMAIL_PORT) || 465,
+      secure: true,
       auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
       connectionTimeout: 5000,
       greetingTimeout: 5000
@@ -269,7 +270,8 @@ exports.forgotPassword = async (req, res) => {
     try {
       const transporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: process.env.EMAIL_PORT || 587,
+        port: Number(process.env.EMAIL_PORT) || 465,
+        secure: true,
         auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
         connectionTimeout: 5000,
         greetingTimeout: 5000
