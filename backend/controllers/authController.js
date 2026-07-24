@@ -49,9 +49,11 @@ const generateOTP = () => crypto.randomInt(100000, 999999).toString();
 const sendOTPEmail = async (email, otp, name) => {
   try {
     const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: process.env.EMAIL_PORT || 587,
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000
     });
     await transporter.sendMail({
       from: `"CoinFlip Game" <${process.env.EMAIL_USER}>`,
@@ -265,9 +267,11 @@ exports.forgotPassword = async (req, res) => {
 
     try {
       const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port: process.env.EMAIL_PORT,
-        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: process.env.EMAIL_PORT || 587,
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000
       });
       await transporter.sendMail({
         from: `"CoinFlip Game" <${process.env.EMAIL_USER}>`,
