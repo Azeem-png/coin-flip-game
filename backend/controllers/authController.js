@@ -63,6 +63,7 @@ const sendOTPEmail = async (email, otp, name) => {
     });
   } catch (err) {
     logger.warn('Email send error', { error: err.message });
+    console.error('EMAIL_ERROR:', err.message);
   }
 };
 

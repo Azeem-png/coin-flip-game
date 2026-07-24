@@ -1,0 +1,41 @@
+[
+  {
+    "_id": "6a5909fe9834cdd02d5e9949",
+    "commissionPercent": 5,
+    "minDeposit": 50,
+    "minWithdrawal": 200,
+    "minBet": 50,
+    "maxBet": 50000,
+    "forceCoinResult": null,
+    "forceNextNGames": 0,
+    "forcedGamesPlayed": 0,
+    "referralCommissionPercent": 2,
+    "referralBonusEnabled": true,
+    "maintenanceMode": false,
+    "maintenanceMessage": "We are under maintenance. Please check back soon.",
+    "defaultCurrency": "INR",
+    "supportedCurrencies": [
+      "INR",
+      "USD",
+      "EUR",
+      "GBP"
+    ],
+    "exchangeRates": {
+      "INR": 1,
+      "USD": 0.012,
+      "EUR": 0.011,
+      "GBP": 0.0095
+    },
+    "manualDraw": false,
+    "freeManualDraw": false,
+    "sessionDuration": 10,
+    "autoResolve": true,
+    "autoCommission": false,
+    "platformBalance": 4450,
+    "platformTotalEarnings": 4450,
+    "announcement": "",
+    "announcementEnabled": false,
+    "updatedAt": "2026-07-21T16:23:09.146Z",
+    "__v": 0
+  }
+]

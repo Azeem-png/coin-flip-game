@@ -1,39 +1,27 @@
 param(
-  [string]$BackupDir = ".\backups",
-  [string]$MongoUri = "mongodb://localhost:27017/coinflip",
-  [int]$RetentionDays = 7
+  [string]$BackupDir = (Join-Path $PSScriptRoot "..\backups"),
+  [int]$RetentionDays = 30
 )
 
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$dbName = "coinflip"
-$backupPath = Join-Path $BackupDir "${dbName}_$timestamp"
+$backupPath = Join-Path $BackupDir "backup_$timestamp"
 
-Write-Host "Starting MongoDB backup..." -ForegroundColor Cyan
+Write-Host "[Backup] Starting..." -ForegroundColor Cyan
 
-# Create backup directory
-New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
-
-# Run mongodump
-& "mongodump" --uri="$MongoUri" --out="$backupPath" 2>&1
+# Run Node.js backup script
+$nodeScript = Join-Path $PSScriptRoot "auto-backup.js"
+node $nodeScript 2>&1
 
 if ($LASTEXITCODE -eq 0) {
-  Write-Host "Backup completed: $backupPath" -ForegroundColor Green
+  Write-Host "[Backup] Completed!" -ForegroundColor Green
 
-  # Compress backup
-  Compress-Archive -Path "$backupPath\*" -DestinationPath "${backupPath}.zip" -Force
-  Remove-Item -Recurse -Force $backupPath
-
-  Write-Host "Backup compressed: ${backupPath}.zip" -ForegroundColor Green
-
-  # Clean old backups
+  # Remove old backups
   $cutoff = (Get-Date).AddDays(-$RetentionDays)
-  Get-ChildItem $BackupDir -Filter "*.zip" | Where-Object { $_.LastWriteTime -lt $cutoff } | ForEach-Object {
-    Remove-Item $_.FullName -Force
-    Write-Host "Removed old backup: $($_.Name)" -ForegroundColor Yellow
+  Get-ChildItem $BackupDir -Directory -Filter "backup_*" | Where-Object { $_.LastWriteTime -lt $cutoff } | ForEach-Object {
+    Remove-Item -Recurse -Force $_.FullName
+    Write-Host "[Backup] Removed old: $($_.Name)" -ForegroundColor Yellow
   }
 } else {
-  Write-Host "Backup FAILED!" -ForegroundColor Red
+  Write-Host "[Backup] FAILED!" -ForegroundColor Red
   exit 1
 }
-
-Write-Host "Backup process complete." -ForegroundColor Green
