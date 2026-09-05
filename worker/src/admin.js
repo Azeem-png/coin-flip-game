@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { first, all, run, now, uid, atomicAddBalance, balCol, getSettings, getUserPublic, toGame, toTransaction } from "./db.js";
+import { first, all, run, now, uid, atomicAddBalance, balCol, getSettings, getUserPublic, toPublicUser, toGame, toTransaction } from "./db.js";
 import { protect, adminAuth } from "./middleware.js";
 import { autoExpireWithdrawals } from "./wallet.js";
 import { getCurrentSession, createNewSession, manualResolve, settleGame, ensureActiveSession } from "./sessions.js";
@@ -105,7 +105,7 @@ admin.get("/users", async (c) => {
 		const where = conds.join(" AND ");
 		const rows = await all(db, `SELECT ${ADMIN_PUBLIC_COLS} FROM users WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`, [...params, limit, offset]);
 		const t = await first(db, `SELECT COUNT(*) AS n FROM users WHERE ${where}`, params);
-		return c.json({ success: true, users: rows, total: t.n, page, pages: Math.ceil(t.n / limit) });
+		return c.json({ success: true, users: rows.map(toPublicUser), total: t.n, page, pages: Math.ceil(t.n / limit) });
 	} catch (err) {
 		console.error("admin users error:", err.message);
 		return c.json({ success: false, message: "Internal server error" }, 500);
@@ -122,7 +122,7 @@ admin.get("/users/:id", async (c) => {
 		const referrals = await all(db, `SELECT name, email, created_at FROM users WHERE referred_by = ?`, [row.id]);
 		return c.json({
 			success: true,
-			user: row,
+			user: toPublicUser(row),
 			transactions: transactions.map(toTransaction),
 			gameHistory: games.map(toGame),
 			referrals: referrals.map((r) => ({ name: r.name, email: r.email, createdAt: r.created_at }))

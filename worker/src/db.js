@@ -33,6 +33,7 @@ const PUBLIC_USER_COLS = `id, name, email, phone, role, status,
 export function toPublicUser(row) {
 	if (!row) return null;
 	return {
+		_id: row.id,
 		id: row.id,
 		name: row.name,
 		email: row.email,
