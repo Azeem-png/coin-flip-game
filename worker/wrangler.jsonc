@@ -9,7 +9,8 @@
 	},
 	"assets": {
 		"directory": "../frontend",
-		"binding": "ASSETS"
+		"binding": "ASSETS",
+		"html_handling": "none"
 	},
 	"d1_databases": [
 		{
