@@ -1,0 +1,16 @@
+{
+	"name": "coin-flip-game-cloudflare",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy"
+	},
+	"dependencies": {
+		"@cloudflare/containers": "^0.2.4"
+	},
+	"devDependencies": {
+		"wrangler": "^4.129.0"
+	}
+}

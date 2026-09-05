@@ -195,7 +195,8 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
   logger.info(`🚀 CoinFlip Server running on port ${PORT}`);
   logger.info(`🌐 Frontend: http://localhost:${PORT}`);
   logger.info(`📡 API: http://localhost:${PORT}/api`);
