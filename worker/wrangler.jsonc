@@ -1,0 +1,31 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "coinflip",
+	"main": "src/index.js",
+	"compatibility_date": "2026-09-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true
+	},
+	"assets": {
+		"directory": "../frontend",
+		"binding": "ASSETS"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "coinflip",
+			"database_id": "ca9d8fca-fab5-4c91-8fd5-ae6abf9c5cfa"
+		}
+	],
+	"triggers": {
+		"crons": ["*/1 * * * *"]
+	},
+	"vars": {
+		"NODE_ENV": "production",
+		"JWT_EXPIRES_IN": "7d",
+		"EMAIL_HOST": "smtp.gmail.com",
+		"EMAIL_PORT": "587",
+		"FRONTEND_URL": "https://coinflip.azeemkhan9092.workers.dev"
+	}
+}

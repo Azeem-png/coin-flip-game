@@ -9,7 +9,9 @@
 	},
 	"vars": {
 		"NODE_ENV": "production",
-		"JWT_EXPIRES_IN": "7d"
+		"JWT_EXPIRES_IN": "7d",
+		"EMAIL_HOST": "smtp.gmail.com",
+		"EMAIL_PORT": "587"
 	},
 	"containers": [
 		{
