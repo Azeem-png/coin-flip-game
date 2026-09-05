@@ -27,6 +27,6 @@
 		"JWT_EXPIRES_IN": "7d",
 		"EMAIL_HOST": "smtp.gmail.com",
 		"EMAIL_PORT": "587",
-		"FRONTEND_URL": "https://coinflip.azeemkhan9092.workers.dev"
+		"FRONTEND_URL": "https://coinflip.fliparena.workers.dev"
 	}
 }

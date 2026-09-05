@@ -65,7 +65,22 @@ export default {
 		if (url.pathname.startsWith("/api")) {
 			return app.fetch(request, env, ctx);
 		}
-		return env.ASSETS.fetch(request);
+		if (url.pathname === "/") {
+			return env.ASSETS.fetch(new Request(new URL("/index.html", url), request));
+		}
+		let res = await env.ASSETS.fetch(request);
+		if (res.status === 404) {
+			const p = url.pathname;
+			const last = p.split("/").pop();
+			const tries = [];
+			if (p.endsWith("/")) tries.push(`${p}index.html`);
+			else if (!last.includes(".")) tries.push(`${p}.html`, `${p}/index.html`);
+			for (const t of tries) {
+				const r2 = await env.ASSETS.fetch(new Request(new URL(t, url), request));
+				if (r2.ok) return r2;
+			}
+		}
+		return res;
 	},
 	async scheduled(event, env, ctx) {
 		ctx.waitUntil(
