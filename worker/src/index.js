@@ -22,6 +22,33 @@ app.use("/api/*", async (c, next) => {
 	return middleware(c, next);
 });
 
+// Global /api sliding-window limiter (parity with Express version: 200 req/min/IP).
+const globalHits = new Map();
+let globalPrune = 0;
+
+app.use("/api/*", async (c, next) => {
+	const t = Date.now();
+	if (t - globalPrune > 60000) {
+		globalPrune = t;
+		for (const [k, v] of globalHits) {
+			while (v.length && v[0] <= t - 60000) v.shift();
+			if (!v.length) globalHits.delete(k);
+		}
+	}
+	const key = c.req.header("CF-Connecting-IP") || "unknown";
+	let arr = globalHits.get(key);
+	if (!arr) {
+		arr = [];
+		globalHits.set(key, arr);
+	}
+	while (arr.length && arr[0] <= t - 60000) arr.shift();
+	arr.push(t);
+	if (arr.length > 200) {
+		return c.json({ success: false, message: "Too many requests, slow down." }, 429);
+	}
+	await next();
+});
+
 app.get("/api/health", async (c) => {
 	let dbStatus = "unknown";
 	try {

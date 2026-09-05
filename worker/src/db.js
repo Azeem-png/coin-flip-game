@@ -151,6 +151,18 @@ export async function getSettings(db) {
 	}
 	return {
 		...s,
+		commissionPercent: s.commission_percent,
+		minBet: s.min_bet,
+		maxBet: s.max_bet,
+		minDeposit: s.min_deposit,
+		minWithdrawal: s.min_withdrawal,
+		sessionDuration: s.session_duration,
+		referralCommissionPercent: s.referral_commission_percent,
+		platformBalance: s.platform_balance,
+		platformTotalEarnings: s.platform_total_earnings,
+		announcement: s.announcement,
+		maintenanceMessage: s.maintenance_message,
+		defaultCurrency: s.default_currency,
 		supportedCurrencies: JSON.parse(s.supported_currencies || "[]"),
 		exchangeRates: JSON.parse(s.exchange_rates || "{}"),
 		maintenanceMode: !!s.maintenance_mode,

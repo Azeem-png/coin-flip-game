@@ -1,4 +1,4 @@
-const CACHE = 'coinflip-v6';
+const CACHE = 'coinflip-v7';
 const ASSETS = [
   '/',
   '/login.html',
@@ -33,6 +33,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // Never cache API responses — game data must always be fresh.
+  if (new URL(e.request.url).pathname.startsWith('/api')) return;
   e.respondWith(
     caches.match(e.request).then(cached => {
       const fetched = fetch(e.request).then(res => {

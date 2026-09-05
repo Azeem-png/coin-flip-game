@@ -14,6 +14,7 @@ const SETTING_MAP = {
 	minWithdrawal: "min_withdrawal",
 	minBet: "min_bet",
 	maxBet: "max_bet",
+	sessionDuration: "session_duration",
 	referralCommissionPercent: "referral_commission_percent",
 	referralBonusEnabled: "referral_bonus_enabled",
 	maintenanceMode: "maintenance_mode",
@@ -279,6 +280,7 @@ admin.patch("/settings", async (c) => {
 			db,
 			`UPDATE settings SET commission_percent = MIN(100, MAX(0, commission_percent)),
 			 min_bet = MAX(0, min_bet), max_bet = MAX(max_bet, min_bet + 1),
+			 session_duration = MAX(session_duration, 5),
 			 referral_commission_percent = MIN(100, MAX(0, referral_commission_percent)) WHERE id = 1`
 		);
 		const settings = await getSettings(db);
