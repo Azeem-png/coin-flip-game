@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { first, all, run, now, uid, atomicAddBalance, balCol, getSettings, getUserPublic, toGame, toTransaction } from "./db.js";
 import { protect, adminAuth } from "./middleware.js";
 import { autoExpireWithdrawals } from "./wallet.js";
-import { getCurrentSession, createNewSession, manualResolve, settleGame } from "./sessions.js";
+import { getCurrentSession, createNewSession, manualResolve, settleGame, ensureActiveSession } from "./sessions.js";
 import { hashPassword } from "./util.js";
 
 const admin = new Hono();
@@ -442,6 +442,8 @@ admin.post("/resolve-free-flips", async (c) => {
 admin.get("/session-status", async (c) => {
 	try {
 		const db = c.env.DB;
+		// Advance expired rounds on read so the countdown stays live (no always-on timer).
+		await ensureActiveSession(db);
 		const session = await getCurrentSession(db);
 		if (!session) return c.json({ success: true, active: false, message: "No active session" });
 		const remaining = Math.max(0, Math.ceil((session.end_time - now()) / 1000));

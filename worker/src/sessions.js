@@ -177,6 +177,8 @@ export async function tickSessions(env) {
 	}
 	const current = await getCurrentSession(db);
 	if (!current) await createNewSession(db, settings);
+	// Prune sessions ended over 7 days ago (history/transactions are kept).
+	await run(db, `DELETE FROM game_sessions WHERE status = 'ended' AND end_time < ?`, [now() - 7 * 24 * 60 * 60 * 1000]);
 	return { resolved };
 }
 
